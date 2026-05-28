@@ -673,7 +673,7 @@ with tab4:
             "Adj. p-value"   : tukey.pvalues.round(5),
             "Lower CI"       : tukey.confint[:, 0].round(3),
             "Upper CI"       : tukey.confint[:, 1].round(3),
-            "Significant"    : tukey.reject,
+            "Significant"    : ["Yes" if r else "No" for r in tukey.reject],
         })
 
     with tukey_tab1:
@@ -682,10 +682,11 @@ with tab4:
         else:
             tukey_agent_df = compute_tukey(df, "agent", "wait_time_min")
 
-            # Color rows: red if significant, white if not
+            # Color rows: red if significant, plain if not; force dark text for contrast
             def color_significant(row):
-                color = "background-color: #FDECEA" if row["Significant"] else ""
-                return [color] * len(row)
+                if row["Significant"] == "Yes":
+                    return ["background-color: #FDECEA; color: #1b3a4b"] * len(row)
+                return [""] * len(row)
 
             st.dataframe(
                 tukey_agent_df.style.apply(color_significant, axis=1),
@@ -760,7 +761,7 @@ with tab4:
             "95% CI Lower" : model.conf_int()[0].values.round(4),
             "95% CI Upper" : model.conf_int()[1].values.round(4),
         })
-        coef_df["Significant"] = coef_df["p-value"] < ALPHA
+        coef_df["Significant"] = coef_df["p-value"].apply(lambda p: "Yes" if p < ALPHA else "No")
 
         st.markdown(
             f"**R² = {model.rsquared:.4f}** | "
