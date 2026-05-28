@@ -269,7 +269,7 @@ st.markdown("---")
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📊 Overview",
     "👤 Barista Performance",
-    "🧃 Drink Analysis",
+    "☕ Drink Analysis",
     "📐 Statistical Results",
     "🔍 Data Explorer",
     "💡 Change Proposal (Prompt 1)",
