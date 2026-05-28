@@ -1,0 +1,28 @@
+ANOVA RESULTS SUMMARY
+
+────────────────────────────────────────────────────────────
+  ANOVA: Barista → wait_time_min
+────────────────────────────────────────────────────────────
+  F-statistic  : 879.1529
+  p-value      : 0.000000
+  Significance : SIGNIFICANT (α = 0.05)
+  η² (eta²)   : 0.2603  (26.0% of wait-time variance explained)
+  Number of groups: 5
+
+────────────────────────────────────────────────────────────
+  ANOVA: Drink type → wait_time_min
+────────────────────────────────────────────────────────────
+  F-statistic  : 0.9032
+  p-value      : 0.521225
+  Significance : NOT SIGNIFICANT (α = 0.05)
+  η² (eta²)   : 0.0008  (0.1% of wait-time variance explained)
+  Number of groups: 10
+
+────────────────────────────────────────────────────────────
+  ANOVA: Barista → prep_time_min (barista speed only)
+────────────────────────────────────────────────────────────
+  F-statistic  : 296.8658
+  p-value      : 0.000000
+  Significance : SIGNIFICANT (α = 0.05)
+  η² (eta²)   : 0.1062  (10.6% of wait-time variance explained)
+  Number of groups: 5

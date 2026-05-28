@@ -1,0 +1,11 @@
+group1,group2,meandiff,p_adj,lower_ci,upper_ci,reject_H0
+Alice,Bob,-0.008,0.999684,-0.12,0.104,False
+Alice,Charlie,2.15,0.0,2.032,2.269,True
+Alice,David,0.009,0.999696,-0.12,0.138,False
+Alice,Eve,0.018,0.995813,-0.111,0.146,False
+Bob,Charlie,2.158,0.0,2.039,2.277,True
+Bob,David,0.017,0.996406,-0.112,0.146,False
+Bob,Eve,0.026,0.982868,-0.103,0.155,False
+Charlie,David,-2.141,0.0,-2.276,-2.006,True
+Charlie,Eve,-2.133,0.0,-2.267,-1.998,True
+David,Eve,0.009,0.999842,-0.135,0.152,False

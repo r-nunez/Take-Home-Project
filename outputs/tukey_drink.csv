@@ -1,0 +1,46 @@
+group1,group2,meandiff,p_adj,lower_ci,upper_ci,reject_H0
+Americano,Cappuccino,0.025,0.999998,-0.195,0.245,False
+Americano,Cold Brew,0.058,0.999012,-0.183,0.299,False
+Americano,Espresso,0.043,0.999908,-0.195,0.281,False
+Americano,Flat White,0.024,1.0,-0.238,0.286,False
+Americano,Hot Chocolate,0.01,1.0,-0.295,0.314,False
+Americano,Latte,-0.054,0.997912,-0.255,0.148,False
+Americano,Matcha Latte,0.134,0.918124,-0.163,0.431,False
+Americano,Mocha,0.05,0.999814,-0.204,0.304,False
+Americano,Tea,-0.015,1.0,-0.29,0.259,False
+Cappuccino,Cold Brew,0.033,0.999982,-0.187,0.253,False
+Cappuccino,Espresso,0.018,1.0,-0.199,0.234,False
+Cappuccino,Flat White,-0.002,1.0,-0.245,0.242,False
+Cappuccino,Hot Chocolate,-0.016,1.0,-0.304,0.273,False
+Cappuccino,Latte,-0.079,0.920638,-0.255,0.097,False
+Cappuccino,Matcha Latte,0.109,0.967924,-0.171,0.389,False
+Cappuccino,Mocha,0.025,0.999999,-0.209,0.259,False
+Cappuccino,Tea,-0.041,0.999969,-0.297,0.215,False
+Cold Brew,Espresso,-0.015,1.0,-0.253,0.223,False
+Cold Brew,Flat White,-0.034,0.999994,-0.297,0.228,False
+Cold Brew,Hot Chocolate,-0.049,0.999969,-0.353,0.256,False
+Cold Brew,Latte,-0.112,0.760613,-0.313,0.089,False
+Cold Brew,Matcha Latte,0.076,0.998482,-0.221,0.372,False
+Cold Brew,Mocha,-0.008,1.0,-0.262,0.245,False
+Cold Brew,Tea,-0.074,0.997729,-0.348,0.2,False
+Espresso,Flat White,-0.019,1.0,-0.279,0.24,False
+Espresso,Hot Chocolate,-0.033,0.999999,-0.336,0.269,False
+Espresso,Latte,-0.097,0.872141,-0.294,0.101,False
+Espresso,Matcha Latte,0.091,0.993491,-0.203,0.385,False
+Espresso,Mocha,0.007,1.0,-0.244,0.258,False
+Espresso,Tea,-0.059,0.999609,-0.33,0.213,False
+Flat White,Hot Chocolate,-0.014,1.0,-0.336,0.308,False
+Flat White,Latte,-0.077,0.986436,-0.304,0.149,False
+Flat White,Matcha Latte,0.11,0.983787,-0.204,0.424,False
+Flat White,Mocha,0.026,1.0,-0.248,0.3,False
+Flat White,Tea,-0.039,0.999993,-0.332,0.254,False
+Hot Chocolate,Latte,-0.063,0.99932,-0.338,0.211,False
+Hot Chocolate,Matcha Latte,0.124,0.982508,-0.226,0.475,False
+Hot Chocolate,Mocha,0.04,0.999995,-0.275,0.355,False
+Hot Chocolate,Tea,-0.025,1.0,-0.357,0.306,False
+Latte,Matcha Latte,0.188,0.431115,-0.078,0.453,False
+Latte,Mocha,0.104,0.886585,-0.113,0.32,False
+Latte,Tea,0.038,0.99997,-0.202,0.278,False
+Matcha Latte,Mocha,-0.084,0.997405,-0.391,0.223,False
+Matcha Latte,Tea,-0.149,0.908063,-0.474,0.175,False
+Mocha,Tea,-0.065,0.999359,-0.351,0.22,False

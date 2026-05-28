@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python -c ' *)",
+      "Bash(python -c \"import scipy, statsmodels, matplotlib, seaborn, streamlit, plotly; print\\('All packages OK'\\)\")",
+      "Bash(python 01_clean_data.py)",
+      "Bash(python 02_descriptive_stats.py)",
+      "Bash(python 03_statistical_analysis.py)"
+    ]
+  }
+}

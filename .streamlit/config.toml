@@ -1,0 +1,3 @@
+[browser]
+# Avoid the first-run onboarding prompt and opt-out of telemetry for this project
+gatherUsageStats = false

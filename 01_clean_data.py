@@ -1,0 +1,211 @@
+# =============================================================================
+# 01_clean_data.py
+# PURPOSE: Load raw Excel data, clean it, engineer time-based features,
+#          and persist the result to a local SQLite database.
+#
+# RUN FIRST: All downstream scripts (02, 03, 04) depend on coffee_shop.db.
+#
+# INPUTS:  coffee_shop_activity.xlsx
+# OUTPUTS: coffee_shop.db  (SQLite database, table: "orders")
+# =============================================================================
+
+import sys
+import pandas as pd
+import numpy as np
+import sqlite3
+import os
+
+# Allow Unicode characters (arrows, checkmarks, etc.) in terminal output on Windows
+sys.stdout.reconfigure(encoding="utf-8")
+
+# ── File paths ──────────────────────────────────────────────────────────────
+EXCEL_FILE = "coffee_shop_activity.xlsx"
+DB_FILE    = "coffee_shop.db"
+
+# ── Timestamp column names (used repeatedly below) ──────────────────────────
+TIME_COLS = [
+    "time_entered",
+    "time_ordered",
+    "time_making_started",
+    "time_completed",
+    "time_left",
+]
+
+
+# =============================================================================
+# STEP 1 — LOAD RAW DATA
+# =============================================================================
+
+print("=" * 60)
+print("STEP 1: Loading raw data from Excel")
+print("=" * 60)
+
+df = pd.read_excel(EXCEL_FILE, sheet_name="in")
+
+print(f"  Rows loaded  : {len(df):,}")
+print(f"  Columns      : {list(df.columns)}")
+print(f"\nData types:\n{df.dtypes}")
+print(f"\nMissing values per column:\n{df.isnull().sum()}")
+
+
+# =============================================================================
+# STEP 2 — DATA CLEANING
+# =============================================================================
+
+print("\n" + "=" * 60)
+print("STEP 2: Cleaning data")
+print("=" * 60)
+
+rows_start = len(df)
+
+# ── 2a. Drop rows with any missing timestamp ─────────────────────────────────
+# Timestamps are essential for every KPI; rows without them are unanalyzable.
+df = df.dropna(subset=TIME_COLS)
+print(f"  Dropped {rows_start - len(df):,} rows with missing timestamps.")
+
+# ── 2b. Drop rows with missing categorical fields ────────────────────────────
+rows_before = len(df)
+df = df.dropna(subset=["drink_name", "agent"])
+print(f"  Dropped {rows_before - len(df):,} rows with missing drink/agent.")
+
+# ── 2c. Coerce timestamp columns to datetime ─────────────────────────────────
+for col in TIME_COLS:
+    df[col] = pd.to_datetime(df[col])
+
+# ── 2d. Standardize text columns (strip stray whitespace, consistent casing) ─
+df["drink_name"] = df["drink_name"].str.strip()
+df["agent"]      = df["agent"].str.strip()
+
+# ── 2e. Fill missing order_sent_back with 0 and cast to int ──────────────────
+# Missing means the order was NOT sent back; treat as 0.
+df["order_sent_back"] = df["order_sent_back"].fillna(0).astype(int)
+
+print(f"  Rows remaining after cleaning: {len(df):,}")
+
+
+# =============================================================================
+# STEP 3 — LOGICAL VALIDATION (timestamp sequence check)
+# =============================================================================
+# Expected order for every order:
+#   time_entered ≤ time_ordered ≤ time_making_started ≤ time_completed ≤ time_left
+#
+# Any row that violates this sequence has corrupt timestamps and is removed.
+
+print("\n" + "=" * 60)
+print("STEP 3: Logical validation — timestamp sequence")
+print("=" * 60)
+
+rows_before = len(df)
+
+invalid_mask = (
+    (df["time_ordered"]         < df["time_entered"])         |
+    (df["time_making_started"]  < df["time_ordered"])         |
+    (df["time_completed"]       < df["time_making_started"])  |
+    (df["time_left"]            < df["time_completed"])
+)
+
+df_invalid = df[invalid_mask].copy()   # save for inspection if needed
+df         = df[~invalid_mask].copy()
+
+print(f"  Rows with bad timestamp order: {len(df_invalid):,}")
+print(f"  Rows remaining after validation: {len(df):,}")
+
+if len(df_invalid) > 0:
+    print("  Sample of removed rows:")
+    print(df_invalid[["order_id"] + TIME_COLS].head(3).to_string())
+
+
+# =============================================================================
+# STEP 4 — FEATURE ENGINEERING
+# =============================================================================
+# We decompose the customer journey into distinct time segments.
+# All durations are expressed in MINUTES for readability.
+#
+# Journey timeline:
+#   [enter shop] → [place order] → [barista starts] → [drink ready] → [leave]
+#       queue_wait      idle_wait         prep_time         dwell_time
+#   |←────────────── wait_time_min (PRIMARY KPI) ──────────────→|
+#                   (time_ordered → time_completed)
+
+print("\n" + "=" * 60)
+print("STEP 4: Engineering features")
+print("=" * 60)
+
+def seconds_to_minutes(timedelta_series):
+    """Convert a pandas timedelta Series to float minutes."""
+    return timedelta_series.dt.total_seconds() / 60
+
+# ── PRIMARY KPI ───────────────────────────────────────────────────────────────
+# wait_time_min: time from order placed → drink handed to customer
+df["wait_time_min"] = seconds_to_minutes(df["time_completed"] - df["time_ordered"])
+
+# ── DIAGNOSTIC SEGMENTS ───────────────────────────────────────────────────────
+# queue_wait_min : time between entering the shop and placing the order
+df["queue_wait_min"] = seconds_to_minutes(df["time_ordered"]        - df["time_entered"])
+
+# idle_wait_min  : time between order placed and barista picking it up
+df["idle_wait_min"]  = seconds_to_minutes(df["time_making_started"] - df["time_ordered"])
+
+# prep_time_min  : time the barista actually spends making the drink
+df["prep_time_min"]  = seconds_to_minutes(df["time_completed"]      - df["time_making_started"])
+
+# dwell_time_min : how long the customer lingers after receiving the drink
+df["dwell_time_min"] = seconds_to_minutes(df["time_left"]           - df["time_completed"])
+
+# ── TEMPORAL CONTEXT ──────────────────────────────────────────────────────────
+# Useful for time-of-day and day-of-week breakdowns in the dashboard.
+df["hour_of_day"] = df["time_ordered"].dt.hour
+df["day_of_week"] = df["time_ordered"].dt.day_name()
+df["date"]        = df["time_ordered"].dt.date.astype(str)   # stored as string in SQLite
+
+# ── SUMMARY OF NEW COLUMNS ────────────────────────────────────────────────────
+new_cols = [
+    "wait_time_min", "queue_wait_min", "idle_wait_min",
+    "prep_time_min", "dwell_time_min",
+]
+print("  New time-metric columns (in minutes):")
+for col in new_cols:
+    print(f"    {col:<20} | mean={df[col].mean():6.2f} | "
+          f"min={df[col].min():6.2f} | max={df[col].max():6.2f}")
+
+print(f"\n  Temporal columns: hour_of_day, day_of_week, date")
+
+
+# =============================================================================
+# STEP 5 — SAVE TO SQLITE
+# =============================================================================
+# We convert datetime columns to strings for SQLite compatibility
+# (SQLite has no native datetime type; ISO-format strings are standard).
+
+print("\n" + "=" * 60)
+print("STEP 5: Saving to SQLite")
+print("=" * 60)
+
+df_to_save = df.copy()
+for col in TIME_COLS:
+    df_to_save[col] = df_to_save[col].astype(str)
+
+conn = sqlite3.connect(DB_FILE)
+df_to_save.to_sql("orders", conn, if_exists="replace", index=False)
+
+# ── Quick verification query via SQL ─────────────────────────────────────────
+verification_sql = """
+    SELECT
+        agent,
+        COUNT(*)                                        AS total_orders,
+        ROUND(AVG(wait_time_min), 2)                    AS avg_wait_min,
+        ROUND(MIN(wait_time_min), 2)                    AS min_wait_min,
+        ROUND(MAX(wait_time_min), 2)                    AS max_wait_min,
+        ROUND(SUM(order_sent_back) * 100.0 / COUNT(*), 2) AS send_back_pct
+    FROM orders
+    GROUP BY agent
+    ORDER BY avg_wait_min DESC;
+"""
+print("\n  SQL verification — avg wait time by barista:")
+result = pd.read_sql_query(verification_sql, conn)
+print(result.to_string(index=False))
+
+conn.close()
+
+print(f"\n  Saved {len(df_to_save):,} rows → table 'orders' in '{DB_FILE}'")
+print("\n✓ Script 01 complete. Run 02_descriptive_stats.py next.")

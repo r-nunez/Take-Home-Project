@@ -1,0 +1,4 @@
+Ideas for improving dashboard:
+    Incorporating graphs and charts to track cafe performance over time.
+    Leveraging longitudinal data to create benchmarks for assessing wait times and barista performance.
+    
