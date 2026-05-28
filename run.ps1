@@ -17,5 +17,9 @@ if ($Reinstall -or -not (Test-Path $python)) {
     & $python -m pip install -r "$(Join-Path $PSScriptRoot 'requirements.txt')"
 }
 
-Write-Host "Launching Streamlit app..."
-& $python -m streamlit run "$(Join-Path $PSScriptRoot '04_dashboard.py')"
+Write-Host "Running full pipeline (clean → stats → dashboard)..."
+# 00_run_all.py runs 01_clean_data.py, 02_descriptive_stats.py, and
+# 03_statistical_analysis.py in order, then launches the Streamlit dashboard.
+# Pass --data-only to skip the stat-export scripts when you only need a
+# data refresh and the dashboard is already running (see update_data.ps1).
+& $python "$(Join-Path $PSScriptRoot '00_run_all.py')"

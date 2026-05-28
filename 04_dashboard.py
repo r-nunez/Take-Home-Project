@@ -129,6 +129,14 @@ st.sidebar.markdown(
     "**Primary KPI:** Wait time = time from order placed → drink completed."
 )
 
+st.sidebar.markdown("---")
+# Refresh button — clears Streamlit's data cache so the next interaction
+# re-queries coffee_shop.db from disk.  Use this after running update_data.ps1
+# (or 00_run_all.py) to load newly ingested data without restarting the server.
+if st.sidebar.button("🔄 Refresh Data"):
+    st.cache_data.clear()
+    st.rerun()
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # APPLY FILTERS

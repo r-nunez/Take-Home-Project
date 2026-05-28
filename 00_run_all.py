@@ -17,18 +17,39 @@
 import subprocess
 import sys
 import os
+import argparse
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 
+# ── CLI flags ─────────────────────────────────────────────────────────────────
+# --data-only  Skip the stat-export scripts (02 and 03) and go straight from
+#              data ingestion to the dashboard.  Use this when you only need to
+#              refresh the database and the dashboard already reflects the
+#              latest stats (which it computes live from the DB at runtime).
+parser = argparse.ArgumentParser(description="Coffee Shop Analysis Pipeline")
+parser.add_argument(
+    "--data-only", action="store_true",
+    help="Only ingest data (skip scripts 02 and 03); then launch the dashboard.",
+)
+args = parser.parse_args()
+
 # All scripts live in the same directory as this file
 HERE = Path(__file__).parent.resolve()
 
-STEPS = [
-    ("01_clean_data.py",         "Step 1/3 — Cleaning data & building database"),
-    ("02_descriptive_stats.py",  "Step 2/3 — Computing descriptive statistics & charts"),
-    ("03_statistical_analysis.py","Step 3/3 — Running ANOVA, Tukey HSD & regression"),
-]
+# Build the step list based on the flag.  Scripts 02 and 03 export static
+# CSVs and PNGs to outputs/ — useful for standalone reports but not required
+# by the dashboard, which recomputes all statistics live from coffee_shop.db.
+if args.data_only:
+    STEPS = [
+        ("01_clean_data.py", "Step 1/1 — Cleaning data & building database"),
+    ]
+else:
+    STEPS = [
+        ("01_clean_data.py",          "Step 1/3 — Cleaning data & building database"),
+        ("02_descriptive_stats.py",   "Step 2/3 — Computing descriptive statistics & charts"),
+        ("03_statistical_analysis.py","Step 3/3 — Running ANOVA, Tukey HSD & regression"),
+    ]
 
 
 def run_script(filename, label):

@@ -14,13 +14,23 @@ import pandas as pd
 import numpy as np
 import sqlite3
 import os
+from pathlib import Path
 
 # Allow Unicode characters (arrows, checkmarks, etc.) in terminal output on Windows
 sys.stdout.reconfigure(encoding="utf-8")
 
-# ── File paths ──────────────────────────────────────────────────────────────
-EXCEL_FILE = "coffee_shop_activity.xlsx"
-DB_FILE    = "coffee_shop.db"
+# ── File paths ───────────────────────────────────────────────────────────────
+BASE_DIR   = Path(__file__).parent.resolve()
+DATA_DIR   = BASE_DIR / "data"           # drop new .xlsx files here for multi-file ingestion
+EXCEL_FILE = BASE_DIR / "coffee_shop_activity.xlsx"   # legacy single-file fallback
+DB_FILE    = str(BASE_DIR / "coffee_shop.db")
+
+# ── Required columns — checked before any processing ────────────────────────
+EXPECTED_COLUMNS = {
+    "order_id", "drink_name", "agent", "order_sent_back",
+    "time_entered", "time_ordered", "time_making_started",
+    "time_completed", "time_left",
+}
 
 # ── Timestamp column names (used repeatedly below) ──────────────────────────
 TIME_COLS = [
@@ -40,10 +50,53 @@ print("=" * 60)
 print("STEP 1: Loading raw data from Excel")
 print("=" * 60)
 
-df = pd.read_excel(EXCEL_FILE, sheet_name="in")
+# ── Multi-file ingestion ──────────────────────────────────────────────────────
+# To add new data, drop one or more .xlsx files into the data/ folder.
+# Each file must have the same sheet name ("in") and column layout as the
+# original coffee_shop_activity.xlsx.  All files are merged into one DataFrame
+# before any cleaning or feature engineering begins.
+#
+# If the data/ folder does not exist (or is empty), the script falls back to
+# the legacy single-file path (coffee_shop_activity.xlsx in the project root),
+# which preserves backward compatibility for existing setups.
+if DATA_DIR.exists() and any(DATA_DIR.glob("*.xlsx")):
+    source_files = sorted(DATA_DIR.glob("*.xlsx"))
+    print(f"  data/ folder detected — loading {len(source_files)} file(s):")
+    frames = []
+    for f in source_files:
+        try:
+            frame = pd.read_excel(f, sheet_name="in")
+            print(f"    {f.name}: {len(frame):,} rows")
+            frames.append(frame)
+        except Exception as e:
+            # Surface the filename so the user knows exactly which file failed
+            print(f"  ERROR loading {f.name}: {e}")
+            sys.exit(1)
+    # Stack all files vertically; reset_index keeps row numbers contiguous
+    df = pd.concat(frames, ignore_index=True)
+    print(f"  Total rows loaded from all files: {len(df):,}")
+else:
+    # Legacy path: single master Excel file in the project root
+    if not EXCEL_FILE.exists():
+        print(f"\n  ERROR: No data files found.")
+        print(f"  Either place '{EXCEL_FILE.name}' in the project root,")
+        print(f"  or create a 'data/' folder and add .xlsx files there.")
+        sys.exit(1)
+    print(f"  Loading {EXCEL_FILE.name}")
+    df = pd.read_excel(str(EXCEL_FILE), sheet_name="in")
+    print(f"  Rows loaded: {len(df):,}")
 
-print(f"  Rows loaded  : {len(df):,}")
-print(f"  Columns      : {list(df.columns)}")
+# ── Schema validation ─────────────────────────────────────────────────────────
+# Check for required columns before doing any work.  If a file has been
+# exported with renamed or missing columns, this exits immediately with a clear
+# error message rather than failing silently mid-pipeline.
+missing_cols = EXPECTED_COLUMNS - set(df.columns)
+if missing_cols:
+    print(f"\n  ERROR: Missing required columns: {sorted(missing_cols)}")
+    print(f"  Columns present in file: {sorted(df.columns.tolist())}")
+    sys.exit(1)
+print(f"  Schema check passed — all required columns present.")
+
 print(f"\nData types:\n{df.dtypes}")
 print(f"\nMissing values per column:\n{df.isnull().sum()}")
 
@@ -185,7 +238,20 @@ df_to_save = df.copy()
 for col in TIME_COLS:
     df_to_save[col] = df_to_save[col].astype(str)
 
+# ── Cross-file deduplication ──────────────────────────────────────────────────
+# When multiple files are loaded from data/, the same order might appear in
+# more than one export (e.g., a record near the end of January's file also
+# appears at the start of February's file).  Keeping only the first occurrence
+# of each order_id ensures the database never double-counts an order.
+rows_before_dedup = len(df_to_save)
+df_to_save = df_to_save.drop_duplicates(subset=["order_id"], keep="first")
+n_dupes = rows_before_dedup - len(df_to_save)
+if n_dupes:
+    print(f"  Removed {n_dupes:,} duplicate order_id rows (overlap between files).")
+
 conn = sqlite3.connect(DB_FILE)
+# if_exists="replace" drops and recreates the table on every run, so the
+# database always reflects the exact contents of the current source files.
 df_to_save.to_sql("orders", conn, if_exists="replace", index=False)
 
 # ── Quick verification query via SQL ─────────────────────────────────────────
