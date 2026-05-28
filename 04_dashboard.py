@@ -192,7 +192,8 @@ slowest_agent   = df.groupby("agent")["wait_time_min"].mean().idxmax()
 st.title("☕ Coffee Shop Operations Dashboard")
 st.markdown(
     "Monitor barista performance, drink trends, and time-reduction opportunities. "
-    "Use the **sidebar** to filter by barista, drink type, and date range."
+    "Use the **sidebar** to filter by barista, drink type, and date range.\n"
+    "Created with the assistance of generative AI (Claude Code)."
 )
 
 if exclude_outliers:
